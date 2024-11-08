@@ -65,10 +65,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BraidComponent.cs.cs" />
+    <Compile Include="BraidComponent.cs" />
     <Compile Include="BraidParameters.cs" />
-    <Compile Include="BraidGeometryGenerator.cs.cs" />
-    <Compile Include="BraidComponentUI.cs.cs" />
+    <Compile Include="BraidGeometryGenerator.cs" />
+    <None Include="BraidComponentUI.cs" />
+    <Compile Include="BraidComponentAttributes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

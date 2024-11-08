@@ -33,9 +33,8 @@ namespace _3D_Braid
 
         public BraidComponentUI(BraidComponent component, BraidParameters parameters)
         {
-            _component = component;
-            _parameters = parameters;
-            _sliders = new List<SliderInfo>();
+            _component = component ?? throw new ArgumentNullException(nameof(component));
+            _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             InitializeSliders();
         }
 
@@ -55,6 +54,8 @@ namespace _3D_Braid
 
         public void LayoutUI(RectangleF bounds)
         {
+            if (_sliders == null) InitializeSliders();
+
             float currentY = bounds.Y + PADDING;
 
             foreach (var slider in _sliders)
@@ -78,76 +79,82 @@ namespace _3D_Braid
 
         public void Render(Graphics graphics, bool selected)
         {
-            if (graphics == null) return;
+            if (graphics == null || _sliders == null) return;
 
             foreach (var slider in _sliders)
             {
-                var rect = new Rectangle(
-                    (int)slider.Bounds.X,
-                    (int)slider.Bounds.Y,
-                    (int)slider.Bounds.Width,
-                    (int)slider.Bounds.Height
-                );
+                if (!slider.Bounds.IsEmpty)
+                {
+                    var rect = new Rectangle(
+                        (int)slider.Bounds.X,
+                        (int)slider.Bounds.Y,
+                        (int)slider.Bounds.Width,
+                        (int)slider.Bounds.Height
+                    );
 
-                // Фон слайдера
-                graphics.FillRectangle(
-                    selected ? SystemBrushes.Control : SystemBrushes.ControlLight,
-                    rect
-                );
+                    // Фон слайдера
+                    graphics.FillRectangle(
+                        selected ? SystemBrushes.Control : SystemBrushes.ControlLight,
+                        rect
+                    );
 
-                // Рамка
-                graphics.DrawRectangle(
-                    SystemPens.ControlDark,
-                    rect
-                );
+                    // Рамка
+                    graphics.DrawRectangle(
+                        SystemPens.ControlDark,
+                        rect
+                    );
 
-                // Текст
-                string text = $"{slider.NickName}: {slider.Value:F2}";
-                graphics.DrawString(
-                    text,
-                    SystemFonts.DefaultFont,
-                    SystemBrushes.ControlText,
-                    new Point((int)slider.Bounds.X + 5, (int)slider.Bounds.Y + 2)
-                );
+                    // Текст
+                    string text = $"{slider.NickName}: {slider.Value:F2}";
+                    graphics.DrawString(
+                        text,
+                        GH_FontServer.Standard,
+                        SystemBrushes.ControlText,
+                        new PointF(slider.Bounds.X + 5, slider.Bounds.Y + 2)
+                    );
 
-                // Ползунок
-                float position = (float)((slider.Value - slider.Min) / (slider.Max - slider.Min));
-                int handleX = (int)(slider.Bounds.X + (slider.Bounds.Width * position));
-                graphics.FillRectangle(
-                    SystemBrushes.ControlDark,
-                    handleX - 2,
-                    (int)slider.Bounds.Y,
-                    4,
-                    (int)slider.Bounds.Height
-                );
+                    // Ползунок
+                    float position = (float)((slider.Value - slider.Min) / (slider.Max - slider.Min));
+                    float handleX = slider.Bounds.X + (slider.Bounds.Width * position);
+                    graphics.FillRectangle(
+                        SystemBrushes.ControlDark,
+                        handleX - 2,
+                        slider.Bounds.Y,
+                        4,
+                        slider.Bounds.Height
+                    );
+                }
             }
 
             // Зона для drag&drop
-            var dropRect = new Rectangle(
-                (int)_dropZone.X,
-                (int)_dropZone.Y,
-                (int)_dropZone.Width,
-                (int)_dropZone.Height
-            );
-
-            graphics.DrawRectangle(
-                SystemPens.ControlDark,
-                dropRect
-            );
-
-            using (var format = new StringFormat
+            if (!_dropZone.IsEmpty)
             {
-                Alignment = StringAlignment.Center,
-                LineAlignment = StringAlignment.Center
-            })
-            {
-                graphics.DrawString(
-                    "Перетащите сюда кривую сечения",
-                    SystemFonts.DefaultFont,
-                    SystemBrushes.ControlText,
-                    dropRect,
-                    format
+                var dropRect = new Rectangle(
+                    (int)_dropZone.X,
+                    (int)_dropZone.Y,
+                    (int)_dropZone.Width,
+                    (int)_dropZone.Height
                 );
+
+                graphics.DrawRectangle(
+                    SystemPens.ControlDark,
+                    dropRect
+                );
+
+                using (var format = new StringFormat
+                {
+                    Alignment = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center
+                })
+                {
+                    graphics.DrawString(
+                        "Перетащите сюда кривую сечения",
+                        GH_FontServer.Standard,
+                        SystemBrushes.ControlText,
+                        _dropZone,
+                        format
+                    );
+                }
             }
         }
 
@@ -159,17 +166,30 @@ namespace _3D_Braid
 
         public bool ProcessMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
         {
-            if (e == null) return false;
+            if (e == null || _sliders == null) return false;
 
-            for (int i = 0; i < _sliders.Count; i++)
+            foreach (var slider in _sliders)
             {
-                if (_sliders[i].Bounds.Contains(e.CanvasLocation))
+                if (slider.Bounds.Contains(e.CanvasLocation))
                 {
-                    // Здесь будет реализация редактирования значения
+                    // Обработка двойного клика по слайдеру
                     _component.ExpireSolution(true);
                     return true;
                 }
             }
+            return false;
+        }
+
+        // Добавляем метод для обработки перетаскивания
+        public bool ProcessMouseDown(GH_Canvas sender, GH_CanvasMouseEvent e)
+        {
+            if (e == null) return false;
+
+            if (_dropZone.Contains(e.CanvasLocation))
+            {
+                return true;
+            }
+
             return false;
         }
     }
