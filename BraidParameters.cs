@@ -17,7 +17,7 @@ namespace _3D_Braid
         public const double DIAMETER_MIN = 6.0;
         public const double DIAMETER_MAX = 30.0;
         public const double OFFSET_MIN = 0.0;
-        public const double OFFSET_MAX = 2.0;
+        public const double OFFSET_MAX = 4.0;
         public const int PERIODS_MIN = 2;
         public const int PERIODS_MAX = 30;
 

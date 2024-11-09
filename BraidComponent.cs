@@ -7,6 +7,7 @@ using Grasshopper.Kernel.Special;
 using System.Linq;
 using System.Threading.Tasks;
 using Grasshopper.GUI.Base;
+using Rhino;
 
 namespace _3D_Braid
 {
@@ -18,6 +19,7 @@ namespace _3D_Braid
         private BraidGeometryGenerator _generator;
         private bool _slidersCreated = false;
         private bool _curveCreated = false;
+        private Circle _debugCircle; // Отладочная окружность
 
         public BraidParameters Parameters
         {
@@ -66,7 +68,7 @@ namespace _3D_Braid
                 NickName = "Section",
                 Description = "Секционная кривая",
                 Access = GH_ParamAccess.item,
-                Optional = true  // Делает параметр опциональным
+                Optional = true
             };
             pManager.AddParameter(sectionParam);
         }
@@ -207,12 +209,15 @@ namespace _3D_Braid
             if (!DA.GetData(5, ref diameterOffset)) return;
             if (!DA.GetData(6, ref numPeriods)) return;
 
-            // Проверка на наличие кривой на входе Section
-            if (!DA.GetData(7, ref sectionCurve))
+            if (!DA.GetData(7, ref sectionCurve) || sectionCurve == null)
             {
-                // Создаем эллипс по умолчанию, если входная кривая отсутствует
                 sectionCurve = new Ellipse(Plane.WorldXY, 0.5, 0.8).ToNurbsCurve();
+                Transform rotation = Transform.Rotation(RhinoMath.ToRadians(45), Plane.WorldXY.ZAxis, Point3d.Origin);
+                sectionCurve.Transform(rotation);
             }
+
+            // Создание отладочной окружности с базовым значением диаметра (без Diameter Offset)
+            _debugCircle = new Circle(new Plane(Point3d.Origin, Vector3d.ZAxis, Vector3d.XAxis), diameter / 2);
 
             try
             {
@@ -220,7 +225,7 @@ namespace _3D_Braid
                 _parameters.Height = height;
                 _parameters.Steepness = steepness;
                 _parameters.PointsPeriod = pointsPeriod;
-                _parameters.Diameter = diameter;
+                _parameters.Diameter = diameter + height;
                 _parameters.DiameterOffset = diameterOffset;
                 _parameters.NumPeriods = numPeriods;
                 _parameters.SectionCurve = sectionCurve;
@@ -234,6 +239,17 @@ namespace _3D_Braid
             catch (ArgumentException ex)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex.Message);
+            }
+        }
+
+        public override void DrawViewportWires(IGH_PreviewArgs args)
+        {
+            base.DrawViewportWires(args);
+
+            // Отображаем отладочную окружность, если она валидна
+            if (_debugCircle.IsValid)
+            {
+                args.Display.DrawCircle(_debugCircle, Color.Black, 4); // Черный цвет и толщина 4 пикселя
             }
         }
 

@@ -45,9 +45,10 @@ namespace _3D_Braid
         private GH_Structure<GH_Point> GenerateSineWavePoints()
         {
             double amplitudeFactor = NormalizeAmplitude(_parameters.Steepness);
-            double frequency = (2 * _parameters.NumPeriods) / _parameters.Diameter;
+            double adjustedDiameter = _parameters.Diameter + _parameters.DiameterOffset;
+            double frequency = (2 * _parameters.NumPeriods) / adjustedDiameter;
             double periodLength = 2 * Math.PI / frequency;
-            double circumference = Math.PI * _parameters.Diameter;
+            double circumference = Math.PI * adjustedDiameter;
 
             int numPeriods = (int)(circumference / periodLength);
             double adjustedPeriodLength = circumference / numPeriods;
@@ -69,9 +70,9 @@ namespace _3D_Braid
                     double offsetR = (_parameters.Height / 2) * amplitudeFactor *
                                    Math.Atan(_parameters.Steepness * Math.Sin(2 * phaseAdjustedT)) / (Math.PI / 2);
 
-                    double x = (_parameters.Diameter / 2 + offsetR) * Math.Cos(angle);
+                    double x = (adjustedDiameter / 2 + offsetR) * Math.Cos(angle);
                     double y = offsetY;
-                    double z = (_parameters.Diameter / 2 + offsetR) * Math.Sin(angle);
+                    double z = (adjustedDiameter / 2 + offsetR) * Math.Sin(angle);
 
                     Point3d point = new Point3d(x, y, z);
                     if (period == 0 && i == 0)
@@ -146,9 +147,10 @@ namespace _3D_Braid
         private GH_Structure<GH_Brep> CreateThreeSurfaceArray(Brep baseSurface)
         {
             var polarArray = new GH_Structure<GH_Brep>();
-            double frequency = (2 * _parameters.NumPeriods) / _parameters.Diameter;
+            double adjustedDiameter = _parameters.Diameter + _parameters.DiameterOffset;
+            double frequency = (2 * _parameters.NumPeriods) / adjustedDiameter;
             double periodLength = 2 * Math.PI / frequency;
-            double angleOffset = periodLength / (3 * (_parameters.Diameter / 2));
+            double angleOffset = periodLength / (3 * (adjustedDiameter / 2));
 
             Brep originalSurface = baseSurface.DuplicateBrep();
             polarArray.Append(new GH_Brep(originalSurface), new GH_Path(0));
