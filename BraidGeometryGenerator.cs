@@ -17,10 +17,13 @@ namespace _3D_Braid
 
         public GH_Structure<GH_Brep> GenerateBraid()
         {
-            // Подключение параметра Diameter Offset к диаметру
-            double effectiveDiameter = _parameters.Diameter + _parameters.DiameterOffset;
+            // Создание сечения по умолчанию, если нет входного сечения
+            if (_parameters.SectionCurve == null)
+            {
+                _parameters.SectionCurve = new Ellipse(Plane.WorldXY, 0.5, 0.8).ToNurbsCurve();
+            }
 
-            var pointsTree = GenerateSineWavePoints(effectiveDiameter);
+            var pointsTree = GenerateSineWavePoints();
             var railCurve = CreateInterpolatedCurve(pointsTree);
 
             Curve[] sectionCurves = CreateSectionCurvesAtStartAndEnd(railCurve);
@@ -39,12 +42,12 @@ namespace _3D_Braid
             return null;
         }
 
-        private GH_Structure<GH_Point> GenerateSineWavePoints(double effectiveDiameter)
+        private GH_Structure<GH_Point> GenerateSineWavePoints()
         {
             double amplitudeFactor = NormalizeAmplitude(_parameters.Steepness);
-            double frequency = (2 * _parameters.NumPeriods) / effectiveDiameter;
+            double frequency = (2 * _parameters.NumPeriods) / _parameters.Diameter;
             double periodLength = 2 * Math.PI / frequency;
-            double circumference = Math.PI * effectiveDiameter;
+            double circumference = Math.PI * _parameters.Diameter;
 
             int numPeriods = (int)(circumference / periodLength);
             double adjustedPeriodLength = circumference / numPeriods;
@@ -66,9 +69,9 @@ namespace _3D_Braid
                     double offsetR = (_parameters.Height / 2) * amplitudeFactor *
                                    Math.Atan(_parameters.Steepness * Math.Sin(2 * phaseAdjustedT)) / (Math.PI / 2);
 
-                    double x = (effectiveDiameter / 2 + offsetR) * Math.Cos(angle);
+                    double x = (_parameters.Diameter / 2 + offsetR) * Math.Cos(angle);
                     double y = offsetY;
-                    double z = (effectiveDiameter / 2 + offsetR) * Math.Sin(angle);
+                    double z = (_parameters.Diameter / 2 + offsetR) * Math.Sin(angle);
 
                     Point3d point = new Point3d(x, y, z);
                     if (period == 0 && i == 0)

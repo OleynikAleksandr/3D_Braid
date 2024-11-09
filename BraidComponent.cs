@@ -59,7 +59,16 @@ namespace _3D_Braid
             pManager.AddNumberParameter("Diameter", "mm", "Диаметр кольца (мм)", GH_ParamAccess.item, 18.0);
             pManager.AddNumberParameter("Diameter Offset", "mm", "Смещение диаметра (мм)", GH_ParamAccess.item, 0.2);
             pManager.AddIntegerParameter("Num Periods", "n/n", "Количество периодов", GH_ParamAccess.item, 14);
-            pManager.AddCurveParameter("Section", "Section", "Секционная кривая", GH_ParamAccess.item);
+
+            var sectionParam = new Param_Curve
+            {
+                Name = "Section",
+                NickName = "Section",
+                Description = "Секционная кривая",
+                Access = GH_ParamAccess.item,
+                Optional = true  // Делает параметр опциональным
+            };
+            pManager.AddParameter(sectionParam);
         }
 
         public override void AddedToDocument(GH_Document document)
@@ -197,7 +206,13 @@ namespace _3D_Braid
             if (!DA.GetData(4, ref diameter)) return;
             if (!DA.GetData(5, ref diameterOffset)) return;
             if (!DA.GetData(6, ref numPeriods)) return;
-            if (!DA.GetData(7, ref sectionCurve)) return;
+
+            // Проверка на наличие кривой на входе Section
+            if (!DA.GetData(7, ref sectionCurve))
+            {
+                // Создаем эллипс по умолчанию, если входная кривая отсутствует
+                sectionCurve = new Ellipse(Plane.WorldXY, 0.5, 0.8).ToNurbsCurve();
+            }
 
             try
             {
