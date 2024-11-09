@@ -3,10 +3,10 @@ using Rhino.Geometry;
 using System;
 using System.Drawing;
 using Grasshopper.Kernel.Parameters;
-using System.Linq;
 using Grasshopper.Kernel.Special;
+using System.Linq;
+using System.Threading.Tasks;
 using Grasshopper.GUI.Base;
-using System.Threading;
 
 namespace _3D_Braid
 {
@@ -69,29 +69,28 @@ namespace _3D_Braid
             Component = this;
             GrasshopperDocument = document;
 
-            System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
-            timer.Interval = 1000;
-            timer.Tick += (sender, e) =>
+            Task.Delay(100).ContinueWith(_ =>
             {
-                if (!_slidersCreated && this.Attributes != null && this.Params.Input[0].Attributes != null)
+                GrasshopperDocument.ScheduleSolution(1, doc =>
                 {
-                    CreateSliders(document);
-                    _slidersCreated = true;
-                }
+                    if (!_slidersCreated && this.Attributes != null && this.Params.Input[0].Attributes != null)
+                    {
+                        CreateSliders(GrasshopperDocument);
+                        _slidersCreated = true;
+                    }
 
-                if (!_curveCreated && this.Attributes != null && this.Params.Input[7].Attributes != null)
-                {
-                    CreateCurveParameter(document);
-                    _curveCreated = true;
-                }
+                    if (!_curveCreated && this.Attributes != null && this.Params.Input[7].Attributes != null)
+                    {
+                        CreateCurveParameter(GrasshopperDocument);
+                        _curveCreated = true;
+                    }
 
-                if (_slidersCreated && _curveCreated)
-                {
-                    timer.Stop();
-                    timer.Dispose();
-                }
-            };
-            timer.Start();
+                    if (!_slidersCreated || !_curveCreated)
+                    {
+                        ExpireSolution(true);
+                    }
+                });
+            });
         }
 
         private void CreateSliders(GH_Document document)
