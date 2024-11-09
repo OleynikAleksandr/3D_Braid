@@ -76,6 +76,7 @@
     <None Include="BraidComponentUI.cs" />
     <Compile Include="BraidComponentAttributes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <None Include="Откат Изменений Git.md" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
