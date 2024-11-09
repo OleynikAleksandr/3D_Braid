@@ -17,7 +17,10 @@ namespace _3D_Braid
 
         public GH_Structure<GH_Brep> GenerateBraid()
         {
-            var pointsTree = GenerateSineWavePoints();
+            // Подключение параметра Diameter Offset к диаметру
+            double effectiveDiameter = _parameters.Diameter + _parameters.DiameterOffset;
+
+            var pointsTree = GenerateSineWavePoints(effectiveDiameter);
             var railCurve = CreateInterpolatedCurve(pointsTree);
 
             Curve[] sectionCurves = CreateSectionCurvesAtStartAndEnd(railCurve);
@@ -36,12 +39,12 @@ namespace _3D_Braid
             return null;
         }
 
-        private GH_Structure<GH_Point> GenerateSineWavePoints()
+        private GH_Structure<GH_Point> GenerateSineWavePoints(double effectiveDiameter)
         {
             double amplitudeFactor = NormalizeAmplitude(_parameters.Steepness);
-            double frequency = (2 * _parameters.NumPeriods) / _parameters.Diameter;
+            double frequency = (2 * _parameters.NumPeriods) / effectiveDiameter;
             double periodLength = 2 * Math.PI / frequency;
-            double circumference = Math.PI * _parameters.Diameter;
+            double circumference = Math.PI * effectiveDiameter;
 
             int numPeriods = (int)(circumference / periodLength);
             double adjustedPeriodLength = circumference / numPeriods;
@@ -63,9 +66,9 @@ namespace _3D_Braid
                     double offsetR = (_parameters.Height / 2) * amplitudeFactor *
                                    Math.Atan(_parameters.Steepness * Math.Sin(2 * phaseAdjustedT)) / (Math.PI / 2);
 
-                    double x = (_parameters.Diameter / 2 + offsetR) * Math.Cos(angle);
+                    double x = (effectiveDiameter / 2 + offsetR) * Math.Cos(angle);
                     double y = offsetY;
-                    double z = (_parameters.Diameter / 2 + offsetR) * Math.Sin(angle);
+                    double z = (effectiveDiameter / 2 + offsetR) * Math.Sin(angle);
 
                     Point3d point = new Point3d(x, y, z);
                     if (period == 0 && i == 0)
