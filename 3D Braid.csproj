@@ -76,6 +76,8 @@
     <None Include="BraidComponentUI.cs" />
     <Compile Include="BraidComponentAttributes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <None Include="GH_NumberSliderAttributes.md" />
+    <None Include="Grasshopper.GUI.Base.md" />
     <None Include="NicName.md" />
     <None Include="Решение проблемы синхронного перемещения связанных объектов в Grasshopper.md" />
   </ItemGroup>

@@ -144,18 +144,13 @@ namespace _3D_Braid
         {
             if (param is null) return;
 
-            // Измеряем ширину никнейма заранее
-            float nicknameWidth = GH_FontServer.StringWidth(nickName, GH_FontServer.StandardAdjusted) + 10f;
-            // Устанавливаем минимальную ширину для всех никнеймов
-            nicknameWidth = Math.Max(nicknameWidth, 35f);  // 35 пикселей как пример
-
             var slider = new GH_NumberSlider();
             slider.CreateAttributes();
 
             if (this.Attributes?.DocObject?.Attributes != null)
             {
                 slider.Attributes.Pivot = new PointF(
-                    (float)this.Attributes.DocObject.Attributes.Bounds.Left - sliderOffset + (nicknameWidth - 20f),  // Сдвигаем с учетом ширины
+                    (float)this.Attributes.DocObject.Attributes.Bounds.Left - sliderOffset,
                     (float)param.Attributes.Bounds.Y
                 );
 
@@ -165,21 +160,10 @@ namespace _3D_Braid
 
                 if (slider.Slider != null)
                 {
-                    // Настраиваем стиль отображения с правильным значением
-                    slider.Slider.RailDisplay = GH_SliderRailDisplay.Filled;
-                    slider.Slider.GripDisplay = GH_SliderGripDisplay.ShapeAndText;
-
-                    if (param is Param_Integer)
-                    {
-                        slider.Slider.Type = GH_SliderAccuracy.Integer;
-                        slider.Slider.DecimalPlaces = 0;
-                    }
-                    else
-                    {
-                        slider.Slider.Type = GH_SliderAccuracy.Float;
-                        slider.Slider.DecimalPlaces = 1;
-                    }
-
+                    slider.Slider.Type = (param is Param_Integer) ?
+                        GH_SliderAccuracy.Integer :
+                        GH_SliderAccuracy.Float;
+                    slider.Slider.DecimalPlaces = (param is Param_Integer) ? 0 : 1;
                     slider.Slider.Minimum = Convert.ToDecimal(minValue);
                     slider.Slider.Maximum = Convert.ToDecimal(maxValue);
                     slider.Slider.Value = Convert.ToDecimal(defaultValue);
