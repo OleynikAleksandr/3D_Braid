@@ -4,7 +4,6 @@ using System;
 using System.Drawing;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Special;
-using System.Linq;
 using System.Threading.Tasks;
 using Grasshopper.GUI.Base;
 using Rhino;
@@ -17,21 +16,10 @@ namespace _3D_Braid
         private IGH_Component Component;
         private BraidParameters _parameters;
         private BraidGeometryGenerator _generator;
-        private bool _slidersCreated = false;
-        private bool _curveCreated = false;
-        private Circle _debugCircle; // Отладочная окружность
-
-        public BraidParameters Parameters
-        {
-            get { return _parameters; }
-        }
+        private Circle _debugCircle;
 
         public BraidComponent()
-            : base("3D Braid",
-                   "Braid",
-                   "Создает 3D косичку по окружности с заданными параметрами и сечением профиля",
-                   "Oliinyk",
-                   "Objects")
+            : base("3D Braid", "Braid", "Создает 3D косичку по окружности с заданными параметрами и сечением профиля", "Oliinyk", "Objects")
         {
             _parameters = new BraidParameters();
             _generator = new BraidGeometryGenerator(_parameters);
@@ -76,30 +64,26 @@ namespace _3D_Braid
         public override void AddedToDocument(GH_Document document)
         {
             base.AddedToDocument(document);
-
             Component = this;
             GrasshopperDocument = document;
 
-            Task.Delay(100).ContinueWith(_ =>
+            // Начинаем последовательное создание элементов управления с задержкой
+            Task.Delay(100).ContinueWith(_ => CreateSlidersWithDelay());
+        }
+
+        private void CreateSlidersWithDelay()
+        {
+            GrasshopperDocument.ScheduleSolution(1, doc =>
             {
-                GrasshopperDocument.ScheduleSolution(1, doc =>
+                CreateSliders(GrasshopperDocument);
+
+                // Задержка перед добавлением ноды Curve
+                Task.Delay(50).ContinueWith(__ =>
                 {
-                    if (!_slidersCreated && this.Attributes != null && this.Params.Input[0].Attributes != null)
-                    {
-                        CreateSliders(GrasshopperDocument);
-                        _slidersCreated = true;
-                    }
+                    CreateCurveParameter(GrasshopperDocument);
 
-                    if (!_curveCreated && this.Attributes != null && this.Params.Input[7].Attributes != null)
-                    {
-                        CreateCurveParameter(GrasshopperDocument);
-                        _curveCreated = true;
-                    }
-
-                    if (!_slidersCreated || !_curveCreated)
-                    {
-                        ExpireSolution(true);
-                    }
+                    // Запускаем расчет геометрии только после добавления всех элементов
+                    GrasshopperDocument.ScheduleSolution(1, d => ExpireSolution(true));
                 });
             });
         }
@@ -110,9 +94,9 @@ namespace _3D_Braid
             CreateSlider(document, Params.Input[1] as Grasshopper.Kernel.Parameters.Param_Number, "mm", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX);
             CreateSlider(document, Params.Input[4] as Grasshopper.Kernel.Parameters.Param_Number, "mm", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX);
             CreateSlider(document, Params.Input[5] as Grasshopper.Kernel.Parameters.Param_Number, "mm", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX);
-            CreateSlider(document, Params.Input[2] as Grasshopper.Kernel.Parameters.Param_Number, "ST \u200A\u200A\u200A", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX);
-            CreateSlider(document, Params.Input[3] as Grasshopper.Kernel.Parameters.Param_Integer, "n/n \u200A", 20, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX);
-            CreateSlider(document, Params.Input[6] as Grasshopper.Kernel.Parameters.Param_Integer, "n/n \u200A", 14, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX);
+            CreateSlider(document, Params.Input[2] as Grasshopper.Kernel.Parameters.Param_Number, "ST", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX);
+            CreateSlider(document, Params.Input[3] as Grasshopper.Kernel.Parameters.Param_Integer, "n/n", 20, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX);
+            CreateSlider(document, Params.Input[6] as Grasshopper.Kernel.Parameters.Param_Integer, "n/n", 14, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX);
         }
 
         private void CreateSlider(GH_Document document, IGH_Param param, string nickName, double defaultValue, double minValue, double maxValue)
@@ -122,71 +106,46 @@ namespace _3D_Braid
                 var slider = new GH_NumberSlider();
                 slider.CreateAttributes();
 
-                if (this.Attributes != null && this.Attributes.DocObject != null)
-                {
-                    try
-                    {
-                        slider.Attributes.Pivot = new PointF(
-                            (float)this.Attributes.DocObject.Attributes.Bounds.Left - 200,
-                            (float)param.Attributes.Bounds.Y
-                        );
+                slider.Attributes.Pivot = new PointF(
+                    (float)this.Attributes.DocObject.Attributes.Bounds.Left - 200,
+                    (float)param.Attributes.Bounds.Y
+                );
 
-                        slider.Name = nickName;
-                        slider.NickName = nickName;
-                        slider.Description = param.Description;
+                slider.Name = nickName;
+                slider.NickName = nickName;
+                slider.Description = param.Description;
 
-                        if (slider.Slider != null)
-                        {
-                            slider.Slider.Type = GH_SliderAccuracy.Float;
-                            slider.Slider.Minimum = Convert.ToDecimal(minValue);
-                            slider.Slider.Maximum = Convert.ToDecimal(maxValue);
-                            slider.Slider.DecimalPlaces = 1;
-                            slider.Slider.Value = Convert.ToDecimal(defaultValue);
-                            slider.Slider.GripDisplay = GH_SliderGripDisplay.ShapeAndText;
-                        }
+                slider.Slider.Type = GH_SliderAccuracy.Float;
+                slider.Slider.Minimum = Convert.ToDecimal(minValue);
+                slider.Slider.Maximum = Convert.ToDecimal(maxValue);
+                slider.Slider.DecimalPlaces = 1;
+                slider.Slider.Value = Convert.ToDecimal(defaultValue);
 
-                        document.AddObject(slider, false);
-                        param.AddSource(slider);
-                        document.NewSolution(true);
-                    }
-                    catch (Exception ex)
-                    {
-                        this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Ошибка создания слайдера: " + ex.Message);
-                    }
-                }
+                document.AddObject(slider, false);
+                param.AddSource(slider);
             }
         }
 
         private void CreateCurveParameter(GH_Document document)
         {
-            Grasshopper.Kernel.Parameters.Param_Curve param = Params.Input[7] as Grasshopper.Kernel.Parameters.Param_Curve;
+            var param = Params.Input[7] as Grasshopper.Kernel.Parameters.Param_Curve;
             if (param != null)
             {
-                var curveParam = new Grasshopper.Kernel.Parameters.Param_Curve();
+                var curveParam = new Grasshopper.Kernel.Parameters.Param_Curve
+                {
+                    Name = "Section",
+                    NickName = "Section",
+                    Description = "Секционная кривая"
+                };
                 curveParam.CreateAttributes();
 
-                if (this.Attributes != null && this.Attributes.DocObject != null)
-                {
-                    try
-                    {
-                        curveParam.Attributes.Pivot = new PointF(
-                            (float)this.Params.Input[7].Attributes.Pivot.X - (float)(this.Params.Input[7].Attributes.Bounds.Width),
-                            (float)this.Params.Input[7].Attributes.Pivot.Y
-                        );
+                curveParam.Attributes.Pivot = new PointF(
+                    (float)this.Params.Input[7].Attributes.Pivot.X - (float)(this.Params.Input[7].Attributes.Bounds.Width),
+                    (float)this.Params.Input[7].Attributes.Pivot.Y
+                );
 
-                        curveParam.Name = "Section";
-                        curveParam.NickName = "Section";
-                        curveParam.Description = "Секционная кривая";
-
-                        document.AddObject(curveParam, false);
-                        param.AddSource(curveParam);
-                        document.NewSolution(true);
-                    }
-                    catch (Exception ex)
-                    {
-                        this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Ошибка создания параметра кривой: " + ex.Message);
-                    }
-                }
+                document.AddObject(curveParam, false);
+                param.AddSource(curveParam);
             }
         }
 
@@ -216,7 +175,7 @@ namespace _3D_Braid
                 sectionCurve.Transform(rotation);
             }
 
-            // Создание отладочной окружности с базовым значением диаметра (без Diameter Offset)
+            // Восстанавливаем отладочную окружность
             _debugCircle = new Circle(new Plane(Point3d.Origin, Vector3d.ZAxis, Vector3d.XAxis), diameter / 2);
 
             try
@@ -246,7 +205,7 @@ namespace _3D_Braid
         {
             base.DrawViewportWires(args);
 
-            // Отображаем отладочную окружность, если она валидна
+            // Отображаем отладочную окружность
             if (_debugCircle.IsValid)
             {
                 args.Display.DrawCircle(_debugCircle, Color.Black, 4); // Черный цвет и толщина 4 пикселя
