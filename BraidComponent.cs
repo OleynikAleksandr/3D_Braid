@@ -19,7 +19,7 @@ namespace _3D_Braid
         private BraidGeometryGenerator _generator;
         private bool _slidersCreated = false;
         private bool _curveCreated = false;
-        private Circle _debugCircle; // Отладочная окружность
+        private Circle _debugCircle;
 
         public BraidParameters Parameters
         {
@@ -35,11 +35,18 @@ namespace _3D_Braid
         {
             _parameters = new BraidParameters();
             _generator = new BraidGeometryGenerator(_parameters);
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Component created");
         }
 
         public override Guid ComponentGuid
         {
             get { return new Guid("12345678-1234-1234-1234-123456789ABC"); }
+        }
+
+        public override void CreateAttributes()
+        {
+            m_attributes = new BraidComponentAttributes(this);
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Attributes created");
         }
 
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
@@ -56,8 +63,8 @@ namespace _3D_Braid
             pManager.AddParameter(widthParam);
 
             pManager.AddNumberParameter("Height", "mm", "Высота косички (мм)", GH_ParamAccess.item, 2.0);
-            pManager.AddNumberParameter("Steepness", "ST\u200A\u200A\u200A\u200A", "Крутизна косички", GH_ParamAccess.item, 1.0);
-            pManager.AddIntegerParameter("Points/Period", "n/n\u200A\u200A\u200A\u200A", "Точки на период", GH_ParamAccess.item, 20);
+            pManager.AddNumberParameter("Steepness", "ST", "Крутизна косички", GH_ParamAccess.item, 1.0);
+            pManager.AddIntegerParameter("Points/Period", "n/n", "Точки на период", GH_ParamAccess.item, 20);
             pManager.AddNumberParameter("Diameter", "mm", "Диаметр кольца (мм)", GH_ParamAccess.item, 18.0);
             pManager.AddNumberParameter("Diameter Offset", "mm", "Смещение диаметра (мм)", GH_ParamAccess.item, 0.2);
             pManager.AddIntegerParameter("Num Periods", "n/n", "Количество периодов", GH_ParamAccess.item, 14);
@@ -71,6 +78,8 @@ namespace _3D_Braid
                 Optional = true
             };
             pManager.AddParameter(sectionParam);
+
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Input params registered");
         }
 
         public override void AddedToDocument(GH_Document document)
@@ -80,18 +89,22 @@ namespace _3D_Braid
             Component = this;
             GrasshopperDocument = document;
 
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Component added to document");
+
             Task.Delay(100).ContinueWith(_ =>
             {
                 GrasshopperDocument.ScheduleSolution(1, doc =>
                 {
                     if (!_slidersCreated && this.Attributes != null && this.Params.Input[0].Attributes != null)
                     {
+                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Creating sliders...");
                         CreateSliders(GrasshopperDocument);
                         _slidersCreated = true;
                     }
 
                     if (!_curveCreated && this.Attributes != null && this.Params.Input[7].Attributes != null)
                     {
+                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Creating curve parameter...");
                         CreateCurveParameter(GrasshopperDocument);
                         _curveCreated = true;
                     }
@@ -106,25 +119,34 @@ namespace _3D_Braid
 
         private void CreateSliders(GH_Document document)
         {
-            CreateSlider(document, Params.Input[0] as Grasshopper.Kernel.Parameters.Param_Number, "mm", 6.0, BraidParameters.WIDTH_MIN, BraidParameters.WIDTH_MAX);
-            CreateSlider(document, Params.Input[1] as Grasshopper.Kernel.Parameters.Param_Number, "mm", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX);
-            CreateSlider(document, Params.Input[4] as Grasshopper.Kernel.Parameters.Param_Number, "mm", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX);
-            CreateSlider(document, Params.Input[5] as Grasshopper.Kernel.Parameters.Param_Number, "mm", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX);
-            CreateSlider(document, Params.Input[2] as Grasshopper.Kernel.Parameters.Param_Number, "ST \u200A\u200A\u200A", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX);
-            CreateSlider(document, Params.Input[3] as Grasshopper.Kernel.Parameters.Param_Integer, "n/n \u200A", 20, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX);
-            CreateSlider(document, Params.Input[6] as Grasshopper.Kernel.Parameters.Param_Integer, "n/n \u200A", 14, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX);
+            try
+            {
+                CreateSlider(document, Params.Input[0] as Param_Number, "mm", 6.0, BraidParameters.WIDTH_MIN, BraidParameters.WIDTH_MAX);
+                CreateSlider(document, Params.Input[1] as Param_Number, "mm", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX);
+                CreateSlider(document, Params.Input[4] as Param_Number, "mm", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX);
+                CreateSlider(document, Params.Input[5] as Param_Number, "mm", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX);
+                CreateSlider(document, Params.Input[2] as Param_Number, "ST", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX);
+                CreateSlider(document, Params.Input[3] as Param_Integer, "n/n", 20, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX);
+                CreateSlider(document, Params.Input[6] as Param_Integer, "n/n", 14, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX);
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "All sliders created successfully");
+            }
+            catch (Exception ex)
+            {
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error creating sliders: {ex.Message}");
+            }
         }
 
         private void CreateSlider(GH_Document document, IGH_Param param, string nickName, double defaultValue, double minValue, double maxValue)
         {
             if (param != null)
             {
-                var slider = new GH_NumberSlider();
-                slider.CreateAttributes();
-
-                if (this.Attributes != null && this.Attributes.DocObject != null)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Creating slider for {param.Name}...");
+                try
                 {
-                    try
+                    var slider = new GH_NumberSlider();
+                    slider.CreateAttributes();
+
+                    if (this.Attributes != null && this.Attributes.DocObject != null)
                     {
                         slider.Attributes.Pivot = new PointF(
                             (float)this.Attributes.DocObject.Attributes.Bounds.Left - 200,
@@ -147,27 +169,30 @@ namespace _3D_Braid
 
                         document.AddObject(slider, false);
                         param.AddSource(slider);
-                        document.NewSolution(true);
+                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
+                            $"Slider {nickName} created at {slider.Attributes.Pivot}");
                     }
-                    catch (Exception ex)
-                    {
-                        this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Ошибка создания слайдера: " + ex.Message);
-                    }
+                }
+                catch (Exception ex)
+                {
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
+                        $"Error creating slider for {param.Name}: {ex.Message}");
                 }
             }
         }
 
         private void CreateCurveParameter(GH_Document document)
         {
-            Grasshopper.Kernel.Parameters.Param_Curve param = Params.Input[7] as Grasshopper.Kernel.Parameters.Param_Curve;
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Creating curve parameter...");
+            Param_Curve param = Params.Input[7] as Param_Curve;
             if (param != null)
             {
-                var curveParam = new Grasshopper.Kernel.Parameters.Param_Curve();
-                curveParam.CreateAttributes();
-
-                if (this.Attributes != null && this.Attributes.DocObject != null)
+                try
                 {
-                    try
+                    var curveParam = new Param_Curve();
+                    curveParam.CreateAttributes();
+
+                    if (this.Attributes != null && this.Attributes.DocObject != null)
                     {
                         curveParam.Attributes.Pivot = new PointF(
                             (float)this.Params.Input[7].Attributes.Pivot.X - (float)(this.Params.Input[7].Attributes.Bounds.Width),
@@ -180,12 +205,15 @@ namespace _3D_Braid
 
                         document.AddObject(curveParam, false);
                         param.AddSource(curveParam);
-                        document.NewSolution(true);
+
+                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
+                            $"Curve parameter created at {curveParam.Attributes.Pivot}");
                     }
-                    catch (Exception ex)
-                    {
-                        this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Ошибка создания параметра кривой: " + ex.Message);
-                    }
+                }
+                catch (Exception ex)
+                {
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
+                        $"Error creating curve parameter: {ex.Message}");
                 }
             }
         }
@@ -216,7 +244,6 @@ namespace _3D_Braid
                 sectionCurve.Transform(rotation);
             }
 
-            // Создание отладочной окружности с базовым значением диаметра (без Diameter Offset)
             _debugCircle = new Circle(new Plane(Point3d.Origin, Vector3d.ZAxis, Vector3d.XAxis), diameter / 2);
 
             try
@@ -246,10 +273,9 @@ namespace _3D_Braid
         {
             base.DrawViewportWires(args);
 
-            // Отображаем отладочную окружность, если она валидна
             if (_debugCircle.IsValid)
             {
-                args.Display.DrawCircle(_debugCircle, Color.Black, 4); // Черный цвет и толщина 4 пикселя
+                args.Display.DrawCircle(_debugCircle, Color.Black, 4);
             }
         }
 

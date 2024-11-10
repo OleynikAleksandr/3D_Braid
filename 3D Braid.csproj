@@ -76,6 +76,7 @@
     <None Include="BraidComponentUI.cs" />
     <Compile Include="BraidComponentAttributes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <None Include="Решение проблемы синхронного перемещения связанных объектов в Grasshopper.md" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
