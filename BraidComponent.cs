@@ -4,7 +4,6 @@ using System;
 using System.Drawing;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Special;
-using System.Linq;
 using System.Threading.Tasks;
 using Grasshopper.GUI.Base;
 using Rhino;
@@ -35,7 +34,6 @@ namespace _3D_Braid
         {
             _parameters = new BraidParameters();
             _generator = new BraidGeometryGenerator(_parameters);
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Component created");
         }
 
         public override Guid ComponentGuid
@@ -46,12 +44,11 @@ namespace _3D_Braid
         public override void CreateAttributes()
         {
             m_attributes = new BraidComponentAttributes(this);
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Attributes created");
         }
 
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            var widthParam = new Grasshopper.Kernel.Parameters.Param_Number
+            var widthParam = new Param_Number
             {
                 Name = "Width",
                 NickName = "mm",
@@ -78,8 +75,6 @@ namespace _3D_Braid
                 Optional = true
             };
             pManager.AddParameter(sectionParam);
-
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Input params registered");
         }
 
         public override void AddedToDocument(GH_Document document)
@@ -89,22 +84,18 @@ namespace _3D_Braid
             Component = this;
             GrasshopperDocument = document;
 
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Component added to document");
-
             Task.Delay(100).ContinueWith(_ =>
             {
                 GrasshopperDocument.ScheduleSolution(1, doc =>
                 {
                     if (!_slidersCreated && this.Attributes != null && this.Params.Input[0].Attributes != null)
                     {
-                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Creating sliders...");
                         CreateSliders(GrasshopperDocument);
                         _slidersCreated = true;
                     }
 
                     if (!_curveCreated && this.Attributes != null && this.Params.Input[7].Attributes != null)
                     {
-                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Creating curve parameter...");
                         CreateCurveParameter(GrasshopperDocument);
                         _curveCreated = true;
                     }
@@ -117,103 +108,108 @@ namespace _3D_Braid
             });
         }
 
+        private float GetMaxNicknameWidth()
+        {
+            var font = GH_FontServer.StandardAdjusted;
+            float maxWidth = 0;
+
+            foreach (var nickName in new[] { "mm", "ST", "n/n" })
+            {
+                float width = GH_FontServer.StringWidth(nickName, font);
+                maxWidth = Math.Max(maxWidth, width);
+            }
+
+            return maxWidth;
+        }
+
         private void CreateSliders(GH_Document document)
         {
             try
             {
-                CreateSlider(document, Params.Input[0] as Param_Number, "mm", 6.0, BraidParameters.WIDTH_MIN, BraidParameters.WIDTH_MAX);
-                CreateSlider(document, Params.Input[1] as Param_Number, "mm", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX);
-                CreateSlider(document, Params.Input[4] as Param_Number, "mm", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX);
-                CreateSlider(document, Params.Input[5] as Param_Number, "mm", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX);
-                CreateSlider(document, Params.Input[2] as Param_Number, "ST", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX);
-                CreateSlider(document, Params.Input[3] as Param_Integer, "n/n", 20, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX);
-                CreateSlider(document, Params.Input[6] as Param_Integer, "n/n", 14, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX);
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "All sliders created successfully");
+                float maxNicknameWidth = GetMaxNicknameWidth();
+                float sliderOffset = 200;
+
+                CreateSlider(document, Params.Input[0] as Param_Number, "mm", 6.0, BraidParameters.WIDTH_MIN, BraidParameters.WIDTH_MAX, sliderOffset);
+                CreateSlider(document, Params.Input[1] as Param_Number, "mm", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX, sliderOffset);
+                CreateSlider(document, Params.Input[4] as Param_Number, "mm", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX, sliderOffset);
+                CreateSlider(document, Params.Input[5] as Param_Number, "mm", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX, sliderOffset);
+                CreateSlider(document, Params.Input[2] as Param_Number, "ST", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX, sliderOffset);
+                CreateSlider(document, Params.Input[3] as Param_Integer, "n/n", 20, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX, sliderOffset);
+                CreateSlider(document, Params.Input[6] as Param_Integer, "n/n", 14, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX, sliderOffset);
             }
-            catch (Exception ex)
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error creating sliders: {ex.Message}");
-            }
+            catch { }
         }
 
-        private void CreateSlider(GH_Document document, IGH_Param param, string nickName, double defaultValue, double minValue, double maxValue)
+        private void CreateSlider(GH_Document document, IGH_Param param, string nickName, double defaultValue, double minValue, double maxValue, float sliderOffset)
         {
-            if (param != null)
+            if (param is null) return;
+
+            // Измеряем ширину никнейма заранее
+            float nicknameWidth = GH_FontServer.StringWidth(nickName, GH_FontServer.StandardAdjusted) + 10f;
+            // Устанавливаем минимальную ширину для всех никнеймов
+            nicknameWidth = Math.Max(nicknameWidth, 35f);  // 35 пикселей как пример
+
+            var slider = new GH_NumberSlider();
+            slider.CreateAttributes();
+
+            if (this.Attributes?.DocObject?.Attributes != null)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Creating slider for {param.Name}...");
-                try
-                {
-                    var slider = new GH_NumberSlider();
-                    slider.CreateAttributes();
+                slider.Attributes.Pivot = new PointF(
+                    (float)this.Attributes.DocObject.Attributes.Bounds.Left - sliderOffset + (nicknameWidth - 20f),  // Сдвигаем с учетом ширины
+                    (float)param.Attributes.Bounds.Y
+                );
 
-                    if (this.Attributes != null && this.Attributes.DocObject != null)
+                slider.Name = nickName;
+                slider.NickName = nickName;
+                slider.Description = param.Description;
+
+                if (slider.Slider != null)
+                {
+                    // Настраиваем стиль отображения с правильным значением
+                    slider.Slider.RailDisplay = GH_SliderRailDisplay.Filled;
+                    slider.Slider.GripDisplay = GH_SliderGripDisplay.ShapeAndText;
+
+                    if (param is Param_Integer)
                     {
-                        slider.Attributes.Pivot = new PointF(
-                            (float)this.Attributes.DocObject.Attributes.Bounds.Left - 200,
-                            (float)param.Attributes.Bounds.Y
-                        );
-
-                        slider.Name = nickName;
-                        slider.NickName = nickName;
-                        slider.Description = param.Description;
-
-                        if (slider.Slider != null)
-                        {
-                            slider.Slider.Type = GH_SliderAccuracy.Float;
-                            slider.Slider.Minimum = Convert.ToDecimal(minValue);
-                            slider.Slider.Maximum = Convert.ToDecimal(maxValue);
-                            slider.Slider.DecimalPlaces = 1;
-                            slider.Slider.Value = Convert.ToDecimal(defaultValue);
-                            slider.Slider.GripDisplay = GH_SliderGripDisplay.ShapeAndText;
-                        }
-
-                        document.AddObject(slider, false);
-                        param.AddSource(slider);
-                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                            $"Slider {nickName} created at {slider.Attributes.Pivot}");
+                        slider.Slider.Type = GH_SliderAccuracy.Integer;
+                        slider.Slider.DecimalPlaces = 0;
                     }
+                    else
+                    {
+                        slider.Slider.Type = GH_SliderAccuracy.Float;
+                        slider.Slider.DecimalPlaces = 1;
+                    }
+
+                    slider.Slider.Minimum = Convert.ToDecimal(minValue);
+                    slider.Slider.Maximum = Convert.ToDecimal(maxValue);
+                    slider.Slider.Value = Convert.ToDecimal(defaultValue);
                 }
-                catch (Exception ex)
-                {
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                        $"Error creating slider for {param.Name}: {ex.Message}");
-                }
+
+                document.AddObject(slider, false);
+                param.AddSource(slider);
             }
         }
 
         private void CreateCurveParameter(GH_Document document)
         {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Creating curve parameter...");
-            Param_Curve param = Params.Input[7] as Param_Curve;
-            if (param != null)
+            if (Params.Input[7] is Param_Curve param)
             {
-                try
+                var curveParam = new Param_Curve();
+                curveParam.CreateAttributes();
+
+                if (this.Attributes != null && this.Attributes.DocObject != null)
                 {
-                    var curveParam = new Param_Curve();
-                    curveParam.CreateAttributes();
+                    curveParam.Attributes.Pivot = new PointF(
+                        (float)this.Params.Input[7].Attributes.Pivot.X - (float)(this.Params.Input[7].Attributes.Bounds.Width) - 25,
+                        (float)this.Params.Input[7].Attributes.Pivot.Y + 17
+                    );
 
-                    if (this.Attributes != null && this.Attributes.DocObject != null)
-                    {
-                        curveParam.Attributes.Pivot = new PointF(
-                            (float)this.Params.Input[7].Attributes.Pivot.X - (float)(this.Params.Input[7].Attributes.Bounds.Width),
-                            (float)this.Params.Input[7].Attributes.Pivot.Y
-                        );
+                    curveParam.Name = "Section";
+                    curveParam.NickName = "Section";
+                    curveParam.Description = "Секционная кривая";
 
-                        curveParam.Name = "Section";
-                        curveParam.NickName = "Section";
-                        curveParam.Description = "Секционная кривая";
-
-                        document.AddObject(curveParam, false);
-                        param.AddSource(curveParam);
-
-                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                            $"Curve parameter created at {curveParam.Attributes.Pivot}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                        $"Error creating curve parameter: {ex.Message}");
+                    document.AddObject(curveParam, false);
+                    param.AddSource(curveParam);
                 }
             }
         }
