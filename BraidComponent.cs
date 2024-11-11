@@ -7,6 +7,7 @@ using Grasshopper.Kernel.Special;
 using System.Threading.Tasks;
 using Grasshopper.GUI.Base;
 using Rhino;
+using System.Collections.Generic;
 
 namespace _3D_Braid
 {
@@ -19,27 +20,23 @@ namespace _3D_Braid
         private bool _slidersCreated = false;
         private bool _curveCreated = false;
         private Circle _debugCircle;
+        private Dictionary<int, GH_NumberSlider> _sliders;
 
-        public BraidParameters Parameters
-        {
-            get { return _parameters; }
-        }
+        public BraidParameters Parameters { get { return _parameters; } }
 
         public BraidComponent()
             : base("3D Braid",
-                   "Braid",
-                   "Создает 3D косичку по окружности с заданными параметрами и сечением профиля",
-                   "Oliinyk",
-                   "Objects")
+                  "Braid",
+                  "Создает 3D косичку по окружности с заданными параметрами и сечением профиля",
+                  "Oliinyk",
+                  "Objects")
         {
             _parameters = new BraidParameters();
             _generator = new BraidGeometryGenerator(_parameters);
+            _sliders = new Dictionary<int, GH_NumberSlider>();
         }
 
-        public override Guid ComponentGuid
-        {
-            get { return new Guid("12345678-1234-1234-1234-123456789ABC"); }
-        }
+        public override Guid ComponentGuid => new Guid("12345678-1234-1234-1234-123456789ABC");
 
         public override void CreateAttributes()
         {
@@ -48,7 +45,7 @@ namespace _3D_Braid
 
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            var widthParam = new Param_Number
+            var widthParam = new FollowingParam
             {
                 Name = "Width",
                 NickName = "mm",
@@ -59,14 +56,67 @@ namespace _3D_Braid
             widthParam.SetPersistentData(6.0);
             pManager.AddParameter(widthParam);
 
-            pManager.AddNumberParameter("Height", "mm", "Высота косички (мм)", GH_ParamAccess.item, 2.0);
-            pManager.AddNumberParameter("Steepness", "ST", "Крутизна косички", GH_ParamAccess.item, 1.0);
-            pManager.AddIntegerParameter("Points/Period", "n/n", "Точки на период", GH_ParamAccess.item, 20);
-            pManager.AddNumberParameter("Diameter", "mm", "Диаметр кольца (мм)", GH_ParamAccess.item, 18.0);
-            pManager.AddNumberParameter("Diameter Offset", "mm", "Смещение диаметра (мм)", GH_ParamAccess.item, 0.2);
-            pManager.AddIntegerParameter("Num Periods", "n/n", "Количество периодов", GH_ParamAccess.item, 14);
+            var heightParam = new FollowingParam
+            {
+                Name = "Height",
+                NickName = "mm",
+                Description = "Высота косички (мм)",
+                Access = GH_ParamAccess.item
+            };
+            heightParam.SetPersistentData(2.0);
+            pManager.AddParameter(heightParam);
 
-            var sectionParam = new Param_Curve
+            var steepParam = new FollowingParam
+            {
+                Name = "Steepness",
+                NickName = "ST",
+                Description = "Крутизна косички",
+                Access = GH_ParamAccess.item
+            };
+            steepParam.SetPersistentData(1.0);
+            pManager.AddParameter(steepParam);
+
+            var pointsParam = new Param_Integer
+            {
+                Name = "Points/Period",
+                NickName = "n/n",
+                Description = "Точки на период",
+                Access = GH_ParamAccess.item
+            };
+            pointsParam.SetPersistentData(20);
+            pManager.AddParameter(pointsParam);
+
+            var diameterParam = new FollowingParam
+            {
+                Name = "Diameter",
+                NickName = "mm",
+                Description = "Диаметр кольца (мм)",
+                Access = GH_ParamAccess.item
+            };
+            diameterParam.SetPersistentData(18.0);
+            pManager.AddParameter(diameterParam);
+
+            var offsetParam = new FollowingParam
+            {
+                Name = "Diameter Offset",
+                NickName = "mm",
+                Description = "Смещение диаметра (мм)",
+                Access = GH_ParamAccess.item
+            };
+            offsetParam.SetPersistentData(0.2);
+            pManager.AddParameter(offsetParam);
+
+            var periodsParam = new Param_Integer
+            {
+                Name = "Num Periods",
+                NickName = "n/n",
+                Description = "Количество периодов",
+                Access = GH_ParamAccess.item
+            };
+            periodsParam.SetPersistentData(14);
+            pManager.AddParameter(periodsParam);
+
+            var sectionParam = new FollowingCurveParam
             {
                 Name = "Section",
                 NickName = "Section",
@@ -75,6 +125,11 @@ namespace _3D_Braid
                 Optional = true
             };
             pManager.AddParameter(sectionParam);
+        }
+
+        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        {
+            pManager.AddBrepParameter("Breps", "B", "Результирующая геометрия", GH_ParamAccess.tree);
         }
 
         public override void AddedToDocument(GH_Document document)
@@ -108,40 +163,25 @@ namespace _3D_Braid
             });
         }
 
-        private float GetMaxNicknameWidth()
-        {
-            var font = GH_FontServer.StandardAdjusted;
-            float maxWidth = 0;
-
-            foreach (var nickName in new[] { "mm", "ST", "n/n" })
-            {
-                float width = GH_FontServer.StringWidth(nickName, font);
-                maxWidth = Math.Max(maxWidth, width);
-            }
-
-            return maxWidth;
-        }
-
         private void CreateSliders(GH_Document document)
         {
             try
             {
-                float maxNicknameWidth = GetMaxNicknameWidth();
                 float sliderOffset = 200;
-
-                CreateSlider(document, Params.Input[0] as Param_Number, "mm", 6.0, BraidParameters.WIDTH_MIN, BraidParameters.WIDTH_MAX, sliderOffset);
-                CreateSlider(document, Params.Input[1] as Param_Number, "mm", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX, sliderOffset);
-                CreateSlider(document, Params.Input[4] as Param_Number, "mm", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX, sliderOffset);
-                CreateSlider(document, Params.Input[5] as Param_Number, "mm", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX, sliderOffset);
-                CreateSlider(document, Params.Input[2] as Param_Number, "ST", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX, sliderOffset);
-                CreateSlider(document, Params.Input[3] as Param_Integer, "n/n", 20, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX, sliderOffset);
-                CreateSlider(document, Params.Input[6] as Param_Integer, "n/n", 14, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX, sliderOffset);
+                CreateSlider(document, 0, "mm", 6.0, BraidParameters.WIDTH_MIN, BraidParameters.WIDTH_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 1, "mm", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 4, "mm", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 5, "mm", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 2, "ST", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 3, "n/n", 20.0, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX, sliderOffset, GH_SliderAccuracy.Integer);
+                CreateSlider(document, 6, "n/n", 14.0, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX, sliderOffset, GH_SliderAccuracy.Integer);
             }
             catch { }
         }
 
-        private void CreateSlider(GH_Document document, IGH_Param param, string nickName, double defaultValue, double minValue, double maxValue, float sliderOffset)
+        private void CreateSlider(GH_Document document, int paramIndex, string nickName, double defaultValue, double minValue, double maxValue, float sliderOffset, GH_SliderAccuracy accuracy)
         {
+            var param = Params.Input[paramIndex];
             if (param is null) return;
 
             var slider = new GH_NumberSlider();
@@ -160,10 +200,8 @@ namespace _3D_Braid
 
                 if (slider.Slider != null)
                 {
-                    slider.Slider.Type = (param is Param_Integer) ?
-                        GH_SliderAccuracy.Integer :
-                        GH_SliderAccuracy.Float;
-                    slider.Slider.DecimalPlaces = (param is Param_Integer) ? 0 : 1;
+                    slider.Slider.Type = accuracy;
+                    slider.Slider.DecimalPlaces = (accuracy == GH_SliderAccuracy.Integer) ? 0 : 1;
                     slider.Slider.Minimum = Convert.ToDecimal(minValue);
                     slider.Slider.Maximum = Convert.ToDecimal(maxValue);
                     slider.Slider.Value = Convert.ToDecimal(defaultValue);
@@ -171,8 +209,10 @@ namespace _3D_Braid
 
                 document.AddObject(slider, false);
                 param.AddSource(slider);
+                _sliders[paramIndex] = slider;
             }
         }
+
 
         private void CreateCurveParameter(GH_Document document)
         {
@@ -259,9 +299,14 @@ namespace _3D_Braid
             }
         }
 
-        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        // Метод для проверки, должен ли параметр следовать за компонентом
+        public bool ShouldParameterFollow(IGH_Param param)
         {
-            pManager.AddBrepParameter("Breps", "B", "Результирующая геометрия", GH_ParamAccess.tree);
+            if (param is FollowingParam followingParam)
+            {
+                return followingParam.IsFollowing;
+            }
+            return false;
         }
     }
 }

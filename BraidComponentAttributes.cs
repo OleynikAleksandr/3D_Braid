@@ -59,12 +59,23 @@ namespace _3D_Braid
                     {
                         if (source?.Attributes != null)
                         {
-                            var currentPivot = source.Attributes.Pivot;
-                            source.Attributes.Pivot = new PointF(
-                                currentPivot.X + deltaX,
-                                currentPivot.Y + deltaY
-                            );
-                            source.Attributes.ExpireLayout();
+                            bool shouldFollow = false;
+
+                            // Проверяем наличие интерфейса IFollowing у параметра
+                            if (param is IFollowing followingParam)
+                            {
+                                shouldFollow = followingParam.IsFollowing;
+                            }
+
+                            if (shouldFollow)
+                            {
+                                var currentPivot = source.Attributes.Pivot;
+                                source.Attributes.Pivot = new PointF(
+                                    currentPivot.X + deltaX,
+                                    currentPivot.Y + deltaY
+                                );
+                                source.Attributes.ExpireLayout();
+                            }
                         }
                     }
                 }

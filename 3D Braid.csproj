@@ -75,9 +75,14 @@
     <Compile Include="BraidGeometryGenerator.cs" />
     <None Include="BraidComponentUI.cs" />
     <Compile Include="BraidComponentAttributes.cs" />
+    <Compile Include="FollowingCurveParam.cs" />
+    <Compile Include="IFollowingParam.cs" />
+    <Compile Include="FollowingParam.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <None Include="GH_DocumentObject.md" />
     <None Include="GH_NumberSliderAttributes.md" />
     <None Include="Grasshopper.GUI.Base.md" />
+    <None Include="IGH_Param.md" />
     <None Include="NicName.md" />
     <None Include="Решение проблемы синхронного перемещения связанных объектов в Grasshopper.md" />
   </ItemGroup>
