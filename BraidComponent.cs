@@ -76,7 +76,7 @@ namespace _3D_Braid
             steepParam.SetPersistentData(1.0);
             pManager.AddParameter(steepParam);
 
-            var pointsParam = new Param_Integer
+            var pointsParam = new FollowingParam
             {
                 Name = "Points/Period",
                 NickName = "n/n",
@@ -106,7 +106,7 @@ namespace _3D_Braid
             offsetParam.SetPersistentData(0.2);
             pManager.AddParameter(offsetParam);
 
-            var periodsParam = new Param_Integer
+            var periodsParam = new FollowingParam
             {
                 Name = "Num Periods",
                 NickName = "n/n",
@@ -131,7 +131,6 @@ namespace _3D_Braid
         {
             pManager.AddBrepParameter("Breps", "B", "Результирующая геометрия", GH_ParamAccess.tree);
         }
-
         public override void AddedToDocument(GH_Document document)
         {
             base.AddedToDocument(document);
@@ -213,7 +212,6 @@ namespace _3D_Braid
             }
         }
 
-
         private void CreateCurveParameter(GH_Document document)
         {
             if (Params.Input[7] is Param_Curve param)
@@ -243,19 +241,23 @@ namespace _3D_Braid
             double width = 6.0;
             double height = 0.0;
             double steepness = 0.0;
-            int pointsPeriod = 0;
+            double pointsPeriodDouble = 0.0;
             double diameter = 0.0;
             double diameterOffset = 0.0;
-            int numPeriods = 0;
+            double numPeriodsDouble = 0.0;
             Curve sectionCurve = null;
 
             if (!DA.GetData(0, ref width)) return;
             if (!DA.GetData(1, ref height)) return;
             if (!DA.GetData(2, ref steepness)) return;
-            if (!DA.GetData(3, ref pointsPeriod)) return;
+            if (!DA.GetData(3, ref pointsPeriodDouble)) return;
             if (!DA.GetData(4, ref diameter)) return;
             if (!DA.GetData(5, ref diameterOffset)) return;
-            if (!DA.GetData(6, ref numPeriods)) return;
+            if (!DA.GetData(6, ref numPeriodsDouble)) return;
+
+            // Преобразуем в целые числа
+            int pointsPeriod = (int)Math.Round(pointsPeriodDouble);
+            int numPeriods = (int)Math.Round(numPeriodsDouble);
 
             if (!DA.GetData(7, ref sectionCurve) || sectionCurve == null)
             {
@@ -299,7 +301,6 @@ namespace _3D_Braid
             }
         }
 
-        // Метод для проверки, должен ли параметр следовать за компонентом
         public bool ShouldParameterFollow(IGH_Param param)
         {
             if (param is FollowingParam followingParam)
