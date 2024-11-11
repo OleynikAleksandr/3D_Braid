@@ -204,6 +204,12 @@ namespace _3D_Braid
                     slider.Slider.Minimum = Convert.ToDecimal(minValue);
                     slider.Slider.Maximum = Convert.ToDecimal(maxValue);
                     slider.Slider.Value = Convert.ToDecimal(defaultValue);
+
+                    // Устанавливаем начальные цвета в зависимости от состояния Follow
+                    if (param is FollowingParam followingParam)
+                    {
+                        UpdateSliderColors(slider, followingParam.IsFollowing);
+                    }
                 }
 
                 document.AddObject(slider, false);
@@ -308,6 +314,29 @@ namespace _3D_Braid
                 return followingParam.IsFollowing;
             }
             return false;
+        }
+
+        // ДОБАВЛЯЕМ СЮДА новый метод:
+        public void UpdateSliderColors(GH_NumberSlider slider, bool isFollowing)
+        {
+            if (slider?.Slider != null)
+            {
+                if (isFollowing)
+                {
+                    slider.Slider.GripTopColour = Color.FromArgb(0, 120, 255);    // Более яркий синий
+                    slider.Slider.GripBottomColour = Color.FromArgb(0, 120, 255); // Более яркий синий
+                    slider.Slider.GripEdgeColour = Color.Black;                   // Черный для контура
+                    slider.Slider.TextColour = Color.FromArgb(255, 0, 0);         // Красный для текста
+                }
+                else
+                {
+                    // Возвращаем цвета по умолчанию
+                    slider.Slider.GripTopColour = Color.White;
+                    slider.Slider.GripBottomColour = Color.White;
+                    slider.Slider.GripEdgeColour = Color.Black;
+                    slider.Slider.TextColour = Color.Black;
+                }
+            }
         }
     }
 }

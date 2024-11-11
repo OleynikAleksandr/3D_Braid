@@ -2,6 +2,8 @@
 using System;
 using Grasshopper.Kernel.Parameters;
 using System.Windows.Forms;
+using System.Linq;
+using Grasshopper.Kernel.Special;
 
 namespace _3D_Braid
 {
@@ -17,7 +19,29 @@ namespace _3D_Braid
         public bool IsFollowing
         {
             get { return _following.IsFollowing; }
-            set { _following.IsFollowing = value; }
+            set
+            {
+                if (_following.IsFollowing != value)
+                {
+                    _following.IsFollowing = value;
+                    // Находим компонент и обновляем цвета слайдера
+                    var doc = OnPingDocument();
+                    if (doc != null)
+                    {
+                        var component = doc.Objects.FirstOrDefault(obj => obj is BraidComponent) as BraidComponent;
+                        if (component != null)
+                        {
+                            foreach (var source in Sources)
+                            {
+                                if (source is GH_NumberSlider slider)
+                                {
+                                    component.UpdateSliderColors(slider, value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         public override Guid ComponentGuid => new Guid("C98CC970-E2B5-4D81-93A4-B4932353C86C");

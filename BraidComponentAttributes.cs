@@ -61,7 +61,6 @@ namespace _3D_Braid
                         {
                             bool shouldFollow = false;
 
-                            // Проверяем наличие интерфейса IFollowing у параметра
                             if (param is IFollowing followingParam)
                             {
                                 shouldFollow = followingParam.IsFollowing;

@@ -1,6 +1,8 @@
 ﻿using Grasshopper;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Special;
 using System;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace _3D_Braid
@@ -44,9 +46,24 @@ namespace _3D_Braid
 
         private void Menu_FollowClicked(object sender, EventArgs e)
         {
-            IsFollowing = !IsFollowing;
-            if (_param.OnPingDocument() != null)
+            bool newState = !IsFollowing;
+            IsFollowing = newState;
+
+            // Обновляем цвет слайдера при изменении состояния
+            var doc = _param.OnPingDocument();
+            if (doc != null)
             {
+                var component = doc.Objects.FirstOrDefault(obj => obj is BraidComponent) as BraidComponent;
+                if (component != null && _param is IGH_Param param)
+                {
+                    foreach (var source in param.Sources)
+                    {
+                        if (source is GH_NumberSlider slider)
+                        {
+                            component.UpdateSliderColors(slider, newState);
+                        }
+                    }
+                }
                 _param.RecordUndoEvent("Toggle Following State");
             }
             Instances.ActiveCanvas.Document.NewSolution(false);
