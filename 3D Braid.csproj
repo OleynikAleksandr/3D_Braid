@@ -79,10 +79,7 @@
     <Compile Include="IFollowingParam.cs" />
     <Compile Include="FollowingParam.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <None Include="GH_DocumentObject.md" />
     <None Include="GH_NumberSliderAttributes.md" />
-    <None Include="Grasshopper.GUI.Base.md" />
-    <None Include="IGH_Param.md" />
     <None Include="NicName.md" />
     <None Include="Решение проблемы синхронного перемещения связанных объектов в Grasshopper.md" />
   </ItemGroup>
@@ -93,7 +90,7 @@
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="TextFile1.md" />
+    <None Include="GH_ScriptInstance.md" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

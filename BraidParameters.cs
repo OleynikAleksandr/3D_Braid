@@ -10,26 +10,28 @@ namespace _3D_Braid
         public const double WIDTH_MAX = 30.0;
         public const double HEIGHT_MIN = 0.5;
         public const double HEIGHT_MAX = 6.0;
-        public const double STEEPNESS_MIN = 0.1;
-        public const double STEEPNESS_MAX = 4.0;
-        public const int POINTS_MIN = 5;
-        public const int POINTS_MAX = 60;
         public const double DIAMETER_MIN = 6.0;
         public const double DIAMETER_MAX = 30.0;
         public const double OFFSET_MIN = 0.0;
         public const double OFFSET_MAX = 4.0;
         public const int PERIODS_MIN = 2;
         public const int PERIODS_MAX = 30;
+        public const double MIN_DIAMETER_MIN = 0.3;
+        public const double MIN_DIAMETER_MAX = 3.0;
+        public const double MAX_DIAMETER_MIN = 0.3;
+        public const double MAX_DIAMETER_MAX = 3.0;
+        public const double ROTATION_ANGLE_MIN = 0.0;
+        public const double ROTATION_ANGLE_MAX = 90.0;
 
         // Значения по умолчанию
         private double _width = 6.0;
         private double _height = 2.0;
-        private double _steepness = 1.0;
-        private int _pointsPeriod = 20;
         private double _diameter = 18.0;
         private double _diameterOffset = 0.2;
         private int _numPeriods = 14;
-        private Curve _sectionCurve;
+        private double _minDiameter = 1.4;
+        private double _maxDiameter = 2.0;
+        private double _rotationAngle = 56.0;
 
         // Свойства с проверкой диапазонов
         public double Width
@@ -52,29 +54,7 @@ namespace _3D_Braid
                     throw new ArgumentOutOfRangeException($"Height должен быть между {HEIGHT_MIN} и {HEIGHT_MAX} мм");
                 _height = value;
             }
-        }
-
-        public double Steepness
-        {
-            get { return _steepness; }
-            set
-            {
-                if (value < STEEPNESS_MIN || value > STEEPNESS_MAX)
-                    throw new ArgumentOutOfRangeException($"Steepness должен быть между {STEEPNESS_MIN} и {STEEPNESS_MAX} мм");
-                _steepness = value;
-            }
-        }
-
-        public int PointsPeriod
-        {
-            get { return _pointsPeriod; }
-            set
-            {
-                if (value < POINTS_MIN || value > POINTS_MAX)
-                    throw new ArgumentOutOfRangeException($"Points/Period должен быть между {POINTS_MIN} и {POINTS_MAX}");
-                _pointsPeriod = value;
-            }
-        }
+        }        
 
         public double Diameter
         {
@@ -109,16 +89,39 @@ namespace _3D_Braid
             }
         }
 
-        public Curve SectionCurve
+        public double MinDiameter
         {
-            get { return _sectionCurve; }
+            get { return _minDiameter; }
             set
             {
-                if (value == null)
-                    throw new ArgumentNullException("Section Curve не может быть null");
-                _sectionCurve = value;
+                if (value < MIN_DIAMETER_MIN || value > MIN_DIAMETER_MAX)
+                    throw new ArgumentOutOfRangeException($"Min Diameter должен быть между {MIN_DIAMETER_MIN} и {MIN_DIAMETER_MAX} мм");
+                _minDiameter = value;
             }
         }
+
+        public double MaxDiameter
+        {
+            get { return _maxDiameter; }
+            set
+            {
+                if (value < MAX_DIAMETER_MIN || value > MAX_DIAMETER_MAX)
+                    throw new ArgumentOutOfRangeException($"Max Diameter должен быть между {MAX_DIAMETER_MIN} и {MAX_DIAMETER_MAX} мм");
+                _maxDiameter = value;
+            }
+        }
+
+        public double RotationAngle
+        {
+            get { return _rotationAngle; }
+            set
+            {
+                if (value < ROTATION_ANGLE_MIN || value > ROTATION_ANGLE_MAX)
+                    throw new ArgumentOutOfRangeException($"Rotation Angle должен быть между {ROTATION_ANGLE_MIN} и {ROTATION_ANGLE_MAX} градусов");
+                _rotationAngle = value;
+            }
+        }
+
 
         // Метод для проверки всех параметров сразу
         public bool ValidateAll(out string errorMessage)
@@ -128,17 +131,12 @@ namespace _3D_Braid
                 // Проверяем каждый параметр
                 Width = _width;
                 Height = _height;
-                Steepness = _steepness;
-                PointsPeriod = _pointsPeriod;
                 Diameter = _diameter;
                 DiameterOffset = _diameterOffset;
                 NumPeriods = _numPeriods;
-
-                if (_sectionCurve == null)
-                {
-                    errorMessage = "Требуется секционная кривая";
-                    return false;
-                }
+                MinDiameter = _minDiameter;
+                MaxDiameter = _maxDiameter;
+                RotationAngle = _rotationAngle;                
 
                 errorMessage = string.Empty;
                 return true;

@@ -29,6 +29,6 @@ using System.Runtime.InteropServices;
 //      Номер сборки
 //      Редакция
 //
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
-[assembly: AssemblyInformationalVersion("1.0.0-Public")] // 1.0.0.0 - первая стабильная версия (Major.Minor.Build.Revision)
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]
+[assembly: AssemblyInformationalVersion("2.0.0-Public")] // 2.0.0.0 - Public - вторая стабильная версия с полностью переработанной геометрией (Major.Minor.Build.Revision)

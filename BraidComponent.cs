@@ -18,7 +18,6 @@ namespace _3D_Braid
         private BraidParameters _parameters;
         private BraidGeometryGenerator _generator;
         private bool _slidersCreated = false;
-        private bool _curveCreated = false;
         private Circle _debugCircle;
         private Dictionary<int, GH_NumberSlider> _sliders;
 
@@ -66,26 +65,6 @@ namespace _3D_Braid
             heightParam.SetPersistentData(2.0);
             pManager.AddParameter(heightParam);
 
-            var steepParam = new FollowingParam
-            {
-                Name = "Steepness",
-                NickName = "ST",
-                Description = "Крутизна косички",
-                Access = GH_ParamAccess.item
-            };
-            steepParam.SetPersistentData(1.0);
-            pManager.AddParameter(steepParam);
-
-            var pointsParam = new FollowingParam
-            {
-                Name = "Points/Period",
-                NickName = "n/n",
-                Description = "Точки на период",
-                Access = GH_ParamAccess.item
-            };
-            pointsParam.SetPersistentData(20);
-            pManager.AddParameter(pointsParam);
-
             var diameterParam = new FollowingParam
             {
                 Name = "Diameter",
@@ -116,15 +95,35 @@ namespace _3D_Braid
             periodsParam.SetPersistentData(14);
             pManager.AddParameter(periodsParam);
 
-            var sectionParam = new FollowingCurveParam
+            var minDiamParam = new FollowingParam
             {
-                Name = "Section",
-                NickName = "Section",
-                Description = "Секционная кривая",
-                Access = GH_ParamAccess.item,
-                Optional = true
+                Name = "Min Diameter",
+                NickName = "mm",
+                Description = "Минимальный диаметр сечения (мм)",
+                Access = GH_ParamAccess.item
             };
-            pManager.AddParameter(sectionParam);
+            minDiamParam.SetPersistentData(1.4);
+            pManager.AddParameter(minDiamParam);
+
+            var maxDiamParam = new FollowingParam
+            {
+                Name = "Max Diameter",
+                NickName = "mm",
+                Description = "Максимальный диаметр сечения (мм)",
+                Access = GH_ParamAccess.item
+            };
+            maxDiamParam.SetPersistentData(2.0);
+            pManager.AddParameter(maxDiamParam);
+
+            var rotAngleParam = new FollowingParam
+            {
+                Name = "Rotation Angle",
+                NickName = "deg",
+                Description = "Угол поворота сечений (градусы)",
+                Access = GH_ParamAccess.item
+            };
+            rotAngleParam.SetPersistentData(56.0);
+            pManager.AddParameter(rotAngleParam);
         }
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
@@ -147,14 +146,7 @@ namespace _3D_Braid
                         CreateSliders(GrasshopperDocument);
                         _slidersCreated = true;
                     }
-
-                    if (!_curveCreated && this.Attributes != null && this.Params.Input[7].Attributes != null)
-                    {
-                        CreateCurveParameter(GrasshopperDocument);
-                        _curveCreated = true;
-                    }
-
-                    if (!_slidersCreated || !_curveCreated)
+                    if (!_slidersCreated)
                     {
                         ExpireSolution(true);
                     }
@@ -167,13 +159,14 @@ namespace _3D_Braid
             try
             {
                 float sliderOffset = 200;
-                CreateSlider(document, 0, "mm", 6.0, BraidParameters.WIDTH_MIN, BraidParameters.WIDTH_MAX, sliderOffset, GH_SliderAccuracy.Float);
-                CreateSlider(document, 1, "mm", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX, sliderOffset, GH_SliderAccuracy.Float);
-                CreateSlider(document, 4, "mm", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX, sliderOffset, GH_SliderAccuracy.Float);
-                CreateSlider(document, 5, "mm", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX, sliderOffset, GH_SliderAccuracy.Float);
-                CreateSlider(document, 2, "ST", 1.0, BraidParameters.STEEPNESS_MIN, BraidParameters.STEEPNESS_MAX, sliderOffset, GH_SliderAccuracy.Float);
-                CreateSlider(document, 3, "n/n", 20.0, BraidParameters.POINTS_MIN, BraidParameters.POINTS_MAX, sliderOffset, GH_SliderAccuracy.Integer);
-                CreateSlider(document, 6, "n/n", 14.0, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX, sliderOffset, GH_SliderAccuracy.Integer);
+                CreateSlider(document, 0, "mm\u00A0", 6.0, BraidParameters.WIDTH_MIN, BraidParameters.WIDTH_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 1, "mm\u00A0", 2.0, BraidParameters.HEIGHT_MIN, BraidParameters.HEIGHT_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 2, "mm\u00A0", 18.0, BraidParameters.DIAMETER_MIN, BraidParameters.DIAMETER_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 3, "mm\u00A0", 0.2, BraidParameters.OFFSET_MIN, BraidParameters.OFFSET_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 4, "num", 14.0, BraidParameters.PERIODS_MIN, BraidParameters.PERIODS_MAX, sliderOffset, GH_SliderAccuracy.Integer);
+                CreateSlider(document, 5, "mm\u00A0", 1.4, BraidParameters.MIN_DIAMETER_MIN, BraidParameters.MIN_DIAMETER_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 6, "mm\u00A0", 2.0, BraidParameters.MAX_DIAMETER_MIN, BraidParameters.MAX_DIAMETER_MAX, sliderOffset, GH_SliderAccuracy.Float);
+                CreateSlider(document, 7, "deg\u00A0", 56.0, BraidParameters.ROTATION_ANGLE_MIN, BraidParameters.ROTATION_ANGLE_MAX, sliderOffset, GH_SliderAccuracy.Float);
             }
             catch { }
         }
@@ -218,59 +211,28 @@ namespace _3D_Braid
             }
         }
 
-        private void CreateCurveParameter(GH_Document document)
-        {
-            if (Params.Input[7] is Param_Curve param)
-            {
-                var curveParam = new Param_Curve();
-                curveParam.CreateAttributes();
-
-                if (this.Attributes != null && this.Attributes.DocObject != null)
-                {
-                    curveParam.Attributes.Pivot = new PointF(
-                        (float)this.Params.Input[7].Attributes.Pivot.X - (float)(this.Params.Input[7].Attributes.Bounds.Width) - 25,
-                        (float)this.Params.Input[7].Attributes.Pivot.Y + 17
-                    );
-
-                    curveParam.Name = "Section";
-                    curveParam.NickName = "Section";
-                    curveParam.Description = "Секционная кривая";
-
-                    document.AddObject(curveParam, false);
-                    param.AddSource(curveParam);
-                }
-            }
-        }
-
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             double width = 6.0;
             double height = 0.0;
-            double steepness = 0.0;
-            double pointsPeriodDouble = 0.0;
             double diameter = 0.0;
             double diameterOffset = 0.0;
             double numPeriodsDouble = 0.0;
-            Curve sectionCurve = null;
+            double minDiameter = 0.0;
+            double maxDiameter = 0.0;
+            double rotationAngle = 0.0;
 
             if (!DA.GetData(0, ref width)) return;
             if (!DA.GetData(1, ref height)) return;
-            if (!DA.GetData(2, ref steepness)) return;
-            if (!DA.GetData(3, ref pointsPeriodDouble)) return;
-            if (!DA.GetData(4, ref diameter)) return;
-            if (!DA.GetData(5, ref diameterOffset)) return;
-            if (!DA.GetData(6, ref numPeriodsDouble)) return;
+            if (!DA.GetData(2, ref diameter)) return;
+            if (!DA.GetData(3, ref diameterOffset)) return;
+            if (!DA.GetData(4, ref numPeriodsDouble)) return;
+            if (!DA.GetData("Min Diameter", ref minDiameter)) return;
+            if (!DA.GetData("Max Diameter", ref maxDiameter)) return;
+            if (!DA.GetData("Rotation Angle", ref rotationAngle)) return;
 
             // Преобразуем в целые числа
-            int pointsPeriod = (int)Math.Round(pointsPeriodDouble);
-            int numPeriods = (int)Math.Round(numPeriodsDouble);
-
-            if (!DA.GetData(7, ref sectionCurve) || sectionCurve == null)
-            {
-                sectionCurve = new Ellipse(Plane.WorldXY, 0.5, 0.8).ToNurbsCurve();
-                Transform rotation = Transform.Rotation(RhinoMath.ToRadians(45), Plane.WorldXY.ZAxis, Point3d.Origin);
-                sectionCurve.Transform(rotation);
-            }
+            int numPeriods = (int)Math.Round(numPeriodsDouble);            
 
             _debugCircle = new Circle(new Plane(Point3d.Origin, Vector3d.ZAxis, Vector3d.XAxis), diameter / 2);
 
@@ -278,12 +240,12 @@ namespace _3D_Braid
             {
                 _parameters.Width = width;
                 _parameters.Height = height;
-                _parameters.Steepness = steepness;
-                _parameters.PointsPeriod = pointsPeriod;
-                _parameters.Diameter = diameter + height;
+                _parameters.Diameter = diameter;
                 _parameters.DiameterOffset = diameterOffset;
                 _parameters.NumPeriods = numPeriods;
-                _parameters.SectionCurve = sectionCurve;
+                _parameters.MinDiameter = minDiameter;
+                _parameters.MaxDiameter = maxDiameter;
+                _parameters.RotationAngle = rotationAngle;
 
                 var result = _generator.GenerateBraid();
                 if (result != null)
